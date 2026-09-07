@@ -74,6 +74,16 @@ void rmw_zenoh_pico_set_serial_device(const char *device, const char *param) {
 }
 
 #elif defined (RMW_ZENOH_PICO_TRANSPORT_UNICAST)
+/* A zenoh TCP locator is "tcp/<host>:<port>". An IPv6 literal carries colons
+ * of its own, so it goes in brackets: "tcp/[fd00::1]:7447". A host that is
+ * already bracketed, or has no colon (IPv4, a name), is used as given. */
+static const char *tcp_locator_format(const char *host)
+{
+  if(host != NULL && strchr(host, ':') != NULL && host[0] != '[')
+    return "tcp/[%s]:%s";
+  return "tcp/%s:%s";
+}
+
 static const char *_rmw_zenoh_pico_connect        = RMW_ZENOH_PICO_CONNECT;
 static const char *_rmw_zenoh_pico_connect_port   = RMW_ZENOH_PICO_CONNECT_PORT;
 static const char *_rmw_zenoh_pico_listen         = RMW_ZENOH_PICO_LISTEN;
@@ -154,7 +164,7 @@ static rmw_ret_t rmw_zenoh_pico_init_option(ZenohPicoTransportParams *params)
     memset(params->connect_addr, 0, sizeof(params->connect_addr));
     if(strcmp(_rmw_zenoh_pico_connect_port, "-1") != 0){
       memset(buf, 0, sizeof(buf));
-      snprintf(buf, sizeof(buf), "tcp/%s:%s",
+      snprintf(buf, sizeof(buf), tcp_locator_format(_rmw_zenoh_pico_connect),
 	       _rmw_zenoh_pico_connect,
 	       _rmw_zenoh_pico_connect_port);
       if(strlen(buf) >= sizeof(params->connect_addr) -1) {
@@ -167,7 +177,7 @@ static rmw_ret_t rmw_zenoh_pico_init_option(ZenohPicoTransportParams *params)
     memset(params->listen_addr, 0, sizeof(params->listen_addr));
     if(strcmp(_rmw_zenoh_pico_listen_port,"-1") != 0){
       memset(buf, 0, sizeof(buf));
-      snprintf(buf, sizeof(buf), "tcp/%s:%s",
+      snprintf(buf, sizeof(buf), tcp_locator_format(_rmw_zenoh_pico_listen),
 	       _rmw_zenoh_pico_listen,
 	       _rmw_zenoh_pico_listen_port);
       if(strlen(buf) >= sizeof(params->listen_addr) -1) {

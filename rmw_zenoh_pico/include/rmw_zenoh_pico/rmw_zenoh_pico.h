@@ -59,7 +59,9 @@
 #include <zenoh-pico/utils/result.h>
 
 // debug print
-#ifdef LINUX_POSIX
+#if defined(LINUX_POSIX) || defined(ZENOH_ESPIDF)
+/* ESP-IDF routes printf to the console like a POSIX host does; no
+ * application-supplied target_print() is needed there. */
 #define DEBUG_PRINT(fmt, ...) printf(fmt, ##__VA_ARGS__)
 #else
 extern int target_print(const char *fmt, ...);

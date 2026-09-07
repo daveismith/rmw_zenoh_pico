@@ -19,7 +19,31 @@
 static z_owned_mutex_t mutex_logging;
 
 // Timestamp function
-#if defined(ZENOH_LINUX) || defined (ZENOH_ARDUINO_ESP32) || defined (ZENOH_ESPIDF)
+#if defined (ZENOH_ESPIDF)
+#include <esp_log.h>
+
+/* On ESP-IDF the line goes through the IDF log writer so it carries the usual
+ * "E (ms) rmw_zenoh:" prefix and lands wherever the application's log output
+ * goes, rather than on the calling task's stdout. Level gating already happened
+ * in the RMW_ZENOH_LOG_* macros (rmw_zenoh_pico_debug_level_set), so the write
+ * is unconditional here. */
+void z_log_prefix(const char *prefix, const char *func_name, const char *fmt, ...) {
+  char msg[160];
+
+  va_list args;
+  va_start(args , fmt);
+  vsnprintf(msg, sizeof(msg), fmt, args);
+  va_end(args);
+
+  esp_log_level_t level = ESP_LOG_INFO;
+  char letter = 'I';
+  if(prefix[0] == 'E') { level = ESP_LOG_ERROR; letter = 'E'; }
+  else if(prefix[0] == 'D') { level = ESP_LOG_DEBUG; letter = 'D'; }
+
+  esp_log_write(level, "rmw_zenoh", "%c (%lu) rmw_zenoh: [%s] %s\n",
+		letter, (unsigned long)esp_log_timestamp(), func_name, msg);
+}
+#elif defined(ZENOH_LINUX) || defined (ZENOH_ARDUINO_ESP32)
 
 void z_log_prefix(const char *prefix, const char *func_name, const char *fmt, ...) {
   static char tstamp[64];

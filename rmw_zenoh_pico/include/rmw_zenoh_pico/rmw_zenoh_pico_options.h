@@ -17,6 +17,10 @@
 #ifndef RMW_ZENOH_PICO_OPTIONS_H
 #define RMW_ZENOH_PICO_OPTIONS_H
 
+#include <stdbool.h>
+#include <rmw_zenoh_pico/config.h>   /* RMW_ZENOH_PICO_TRANSPORT_* */
+#include <zenoh-pico/system/platform.h>
+
 #define _Z_LOG_LVL_NONE  0
 #define _Z_LOG_LVL_ERROR 1
 #define _Z_LOG_LVL_INFO  2
@@ -49,6 +53,16 @@ extern "C"
 
   extern int rmw_zenoh_pico_debug_level_get(void);
   extern int rmw_zenoh_pico_debug_level_set(int);
+
+  /* Attributes for zenoh-pico's read and lease tasks (z_task_attr_t is the
+   * platform's type; on FreeRTOS it carries name, priority, stack depth and an
+   * optional static stack). Call before rclc_support_init(); NULL keeps
+   * zenoh-pico's defaults. The pointers must stay valid while a session is open. */
+  extern void rmw_zenoh_pico_set_task_attrs(z_task_attr_t *read_attr, z_task_attr_t *lease_attr);
+
+  /* True when there is no open session, or the open one has lost its transport
+   * (zenoh-pico's z_session_is_closed). For an application watchdog. */
+  extern bool rmw_zenoh_pico_session_is_closed(void);
 
 #if defined(__cplusplus)
 }

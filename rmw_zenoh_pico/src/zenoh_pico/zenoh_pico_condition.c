@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+/* Before rmw_zenoh_pico.h: its logging header redefines _Z_ERROR, and the
+ * inline helper in system_error.h must see zenoh-pico's own version. */
+#include <zenoh-pico/system/common/system_error.h>
 #include <rmw_zenoh_pico/rmw_zenoh_pico.h>
 
 #if defined(ZENOH_LINUX) || defined (ZENOH_ARDUINO_ESP32) || defined (ZENOH_ESPIDF)
@@ -25,12 +28,23 @@ z_result_t z_condvar_init_with_attr(z_owned_condvar_t *cv, pthread_condattr_t *a
 z_result_t z_condvar_timewait(z_loaned_condvar_t *cv, z_loaned_mutex_t *mp, struct timespec *wait_timeout){
   struct timespec abstime;
 
+#if defined (ZENOH_ESPIDF)
+  /* zenoh-pico's ESP-IDF layer (1.10+) takes the deadline on the same clock as
+   * z_clock_now(), CLOCK_MONOTONIC, and converts to the condvar's clock itself.
+   * A CLOCK_REALTIME deadline here is ~55 years in the future on that scale, so
+   * rmw_wait would never time out and the executor would never return. */
+  abstime = z_clock_now();
+  z_clock_advance_us(&abstime,
+		     (unsigned long)(wait_timeout->tv_sec * 1000000UL
+				     + wait_timeout->tv_nsec / 1000UL));
+#else
   memset(&abstime, 0, sizeof(abstime));
   clock_gettime(CLOCK_REALTIME, &abstime);
 
   uint64_t _nsec_time = abstime.tv_nsec + wait_timeout->tv_nsec;
   abstime.tv_sec += wait_timeout->tv_sec + (_nsec_time/1000000000);
   abstime.tv_nsec = _nsec_time % 1000000000;
+#endif
 
   // RMW_ZENOH_LOG_DEBUG("wait_timeout[%ld : %ld] => [%ld : %ld]",
   // 		      wait_timeout->tv_sec,

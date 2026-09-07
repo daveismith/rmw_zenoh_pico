@@ -179,14 +179,17 @@ static inline void __debug_print_log_keyexpr(const _z_keyexpr_t * v, const char 
   const _z_keyexpr_t *key = v;
   char _work[64];
   memset(_work, 0, sizeof(_work));
-  size_t _len = _z_string_len(&key->_suffix) >= sizeof(_work) -1 ? sizeof(_work) -1 : _z_string_len(&key->_suffix);
-  strncpy(_work, _z_string_data(&key->_suffix), _len);
+  /* zenoh-pico >= 1.10 keeps the whole expression in _keyexpr (was _suffix). */
+  size_t _len = _z_string_len(&key->_keyexpr) >= sizeof(_work) -1 ? sizeof(_work) -1 : _z_string_len(&key->_keyexpr);
+  strncpy(_work, _z_string_data(&key->_keyexpr), _len);
 
   _RMW_ZENOH_LOG_PRINT_FORMAT(func, tag, "(%s)", _work);
 }
 
 static inline void __debug_print_log_loaned_sample(const z_loaned_sample_t * v, const char *func, const char *tag) {
-  const _z_keyexpr_t *key = &v->keyexpr;
+  /* A sample's key is a declared keyexpr since zenoh-pico 1.10; the plain
+   * expression is its _inner. */
+  const _z_keyexpr_t *key = &v->keyexpr._inner;
   __debug_print_log_keyexpr(key, func, tag);
 }
 

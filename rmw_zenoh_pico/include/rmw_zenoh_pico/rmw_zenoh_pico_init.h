@@ -27,7 +27,8 @@ extern "C"
 {
 #endif  // if defined(__cplusplus)
 
-#define MAX_INET_DEVICE      50
+/* "tcp/[" + a 45-character IPv6 literal + "]:65535" is 57 bytes plus the NUL. */
+#define MAX_INET_DEVICE      80
 #define MAX_SERIAL_DEVICE    50
 
   typedef struct _ZenohPicoTransportParams

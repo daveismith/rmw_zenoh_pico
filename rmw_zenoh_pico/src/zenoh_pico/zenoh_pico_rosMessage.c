@@ -167,7 +167,11 @@ rmw_zenoh_pico_generate_recv_query_msg_data(const z_loaned_query_t *query,
   // is redefined as a member of the query information.
 
   z_keyexpr_clone(&recv_data->keyexpr, z_query_keyexpr(query));
-  _val->_key = _z_keyexpr_alias(z_loan(recv_data->keyexpr));
+  /* zenoh-pico >= 1.10: _z_query_move_data() copies every aliased field into
+   * the reference-counted query, so its _key stays valid for as long as the
+   * clone above holds the query. Re-pointing _key at our clone (the 1.4
+   * workaround) would now overwrite an owned declared keyexpr. */
+  (void)_val;
 
   // set receive timestamp
   recv_data->recv_timestamp = recv_ts;

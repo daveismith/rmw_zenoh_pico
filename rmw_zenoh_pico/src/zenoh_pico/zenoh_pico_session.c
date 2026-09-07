@@ -18,6 +18,26 @@
 
 static ZenohPicoSession _zenohSession;
 
+/* Attributes for zenoh-pico's read and lease tasks. NULL means zenoh's own
+ * defaults; an RTOS application sets them (name, priority, stack, optionally a
+ * caller-provided stack buffer) before rclc_support_init(). */
+static z_task_attr_t *_rmw_zenoh_pico_read_task_attr = NULL;
+static z_task_attr_t *_rmw_zenoh_pico_lease_task_attr = NULL;
+
+void rmw_zenoh_pico_set_task_attrs(z_task_attr_t *read_attr, z_task_attr_t *lease_attr)
+{
+  _rmw_zenoh_pico_read_task_attr = read_attr;
+  _rmw_zenoh_pico_lease_task_attr = lease_attr;
+}
+
+bool rmw_zenoh_pico_session_is_closed(void)
+{
+  if(_zenohSession.ref <= 0 || !_zenohSession.enable_session)
+    return true;
+
+  return z_session_is_closed(z_loan(_zenohSession.session));
+}
+
 ZenohPicoSession *zenoh_pico_generate_session(const z_loaned_config_t *config,
 					      const char *enclave)
 {
@@ -94,8 +114,15 @@ rmw_ret_t session_connect(ZenohPicoSession *session)
     return RMW_RET_ERROR;
   }
 
-  if (_Z_IS_ERR(zp_start_read_task(z_loan_mut(session->session), NULL))
-      || _Z_IS_ERR(zp_start_lease_task(z_loan_mut(session->session), NULL))) {
+  zp_task_read_options_t read_opts;
+  zp_task_lease_options_t lease_opts;
+  zp_task_read_options_default(&read_opts);
+  zp_task_lease_options_default(&lease_opts);
+  read_opts.task_attributes = _rmw_zenoh_pico_read_task_attr;
+  lease_opts.task_attributes = _rmw_zenoh_pico_lease_task_attr;
+
+  if (_Z_IS_ERR(zp_start_read_task(z_loan_mut(session->session), &read_opts))
+      || _Z_IS_ERR(zp_start_lease_task(z_loan_mut(session->session), &lease_opts))) {
     RMW_ZENOH_LOG_ERROR("Unable to start read and lease tasks");
     z_drop(z_move(session->config));
     z_drop(z_move(session->session));

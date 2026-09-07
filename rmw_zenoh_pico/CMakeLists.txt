@@ -217,8 +217,8 @@ target_compile_options(${PROJECT_NAME}
     $<$<C_COMPILER_ID:GNU>:-Wno-unused-function>
     $<$<C_COMPILER_ID:GNU>:-Wno-pedantic>
     $<$<C_COMPILER_ID:GNU>:$<$<VERSION_GREATER:$<C_COMPILER_VERSION>,8.1>:-Wcast-align=strict>>
-    $<$<C_COMPILER_ID:GNU>:-g>
-    $<$<C_COMPILER_ID:GNU>:-O0>
+    $<$<AND:$<C_COMPILER_ID:GNU>,$<CONFIG:Debug>>:-g>
+    $<$<AND:$<C_COMPILER_ID:GNU>,$<CONFIG:Debug>>:-O0>
     $<$<C_COMPILER_ID:MSVC>:/Wall>
 )
 
