@@ -86,6 +86,7 @@ extern "C"
   extern void rmw_zenoh_pico_debug_recv_msg_data(ReceiveMessageData * recv_data);
 
   extern void recv_msg_list_init(ReceiveMessageDataList *msg_list);
+  extern void recv_msg_list_destroy(ReceiveMessageDataList *msg_list);
   extern ReceiveMessageData *recv_msg_list_append(ReceiveMessageDataList *msg_list,
 						ReceiveMessageData *recv_data);
   extern ReceiveMessageData *recv_msg_list_pop(ReceiveMessageDataList *msg_list);

@@ -124,6 +124,8 @@ static bool zenoh_pico_destroy_subscription_data(ZenohPicoSubData *sub_data)
       ReceiveMessageData *msg_data = recv_msg_list_pop(&sub_data->message_queue);
       ZenohPicoDataDestroy(msg_data);
     }
+    recv_msg_list_destroy(&sub_data->message_queue);
+    data_callback_destroy(&sub_data->data_event_mgr);
 
     if(sub_data->node != NULL){
       (void)zenoh_pico_destroy_node_data(sub_data->node);

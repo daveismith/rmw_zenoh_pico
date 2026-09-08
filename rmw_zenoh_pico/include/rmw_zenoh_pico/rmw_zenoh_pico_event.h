@@ -83,6 +83,7 @@ extern "C"
   extern bool event_condition_detach_and_queue_is_empty(DataEventManager *event_data);
 
   extern void data_callback_init(DataEventManager *data_callback);
+  extern void data_callback_destroy(DataEventManager *data_callback);
   extern void data_callback_set(DataEventManager *data_callback,
 				const void * user_data,
 				rmw_event_callback_t callback);

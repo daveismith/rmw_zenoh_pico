@@ -66,6 +66,7 @@ extern "C"
   /* True when there is no open session, or the open one has lost its transport
    * (zenoh-pico's z_session_is_closed). For an application watchdog. */
   extern bool rmw_zenoh_pico_session_is_closed(void);
+  extern void rmw_zenoh_pico_session_quiesce(void);
 
 #if defined(__cplusplus)
 }

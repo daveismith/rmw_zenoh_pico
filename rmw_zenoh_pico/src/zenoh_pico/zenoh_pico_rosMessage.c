@@ -302,10 +302,13 @@ void recv_msg_list_destroy(ReceiveMessageDataList *msg_list)
   z_mutex_lock(msg_mutex);
   ReceiveMessageData * msg_data = msg_list->que_top;
 
-  for(size_t count = 0; msg_data != NULL; count++){
+  while(msg_data != NULL){
+    ReceiveMessageData *next = msg_data->next;
     (void)zenoh_pico_delete_recv_msg_data(msg_data);
-    msg_data = msg_data->next;
+    msg_data = next;
   }
+  msg_list->que_top = msg_list->que_bottom = NULL;
+  msg_list->count = 0;
   z_mutex_unlock(msg_mutex);
 
   z_mutex_drop(z_move(msg_list->mutex));

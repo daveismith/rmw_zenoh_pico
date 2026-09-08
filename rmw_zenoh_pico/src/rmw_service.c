@@ -193,6 +193,10 @@ bool zenoh_pico_destroy_service_data(ZenohPicoServiceData *data)
 	(void)zenoh_pico_delete_recv_msg_data(res_data);
       }
     }
+    recv_msg_list_destroy(&data->request_queue);
+    recv_msg_list_destroy(&data->response_queue);
+    data_callback_destroy(&data->data_event_mgr);
+    z_drop(z_move(data->condition_mutex));
 
     ZenohPicoDataDestroy(data);
   }
