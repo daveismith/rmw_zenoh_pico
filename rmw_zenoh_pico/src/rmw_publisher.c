@@ -130,7 +130,6 @@ static bool zenoh_pico_destroy_publisher_data(ZenohPicoPubData *pub_data)
 
     attachment_destroy(&pub_data->attachment);
     z_drop(z_move(pub_data->mutex));
-    data_callback_destroy(&pub_data->data_event_mgr);
 
     if(pub_data->node != NULL){
       (void)zenoh_pico_destroy_node_data(pub_data->node);

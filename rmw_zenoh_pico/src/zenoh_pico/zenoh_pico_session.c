@@ -38,19 +38,6 @@ bool rmw_zenoh_pico_session_is_closed(void)
   return z_session_is_closed(z_loan(_zenohSession.session));
 }
 
-/* Stop the background read/lease task so no subscription callback can fire while the
- * application tears entities down. zenoh-pico guarantees no closure runs after the read
- * task stops; without this, freeing an entity's mutex races the read task delivering a
- * sample into it -- a use-after-free the leaked-mutex code happened to survive. The later
- * zenoh_pico_destroy_session() stops these again, which is a no-op. */
-void rmw_zenoh_pico_session_quiesce(void)
-{
-  if(_zenohSession.ref <= 0 || !_zenohSession.enable_session)
-    return;
-  zp_stop_read_task(z_loan_mut(_zenohSession.session));
-  zp_stop_lease_task(z_loan_mut(_zenohSession.session));
-}
-
 ZenohPicoSession *zenoh_pico_generate_session(const z_loaned_config_t *config,
 					      const char *enclave)
 {
