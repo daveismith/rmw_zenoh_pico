@@ -49,12 +49,15 @@ ZenohPicoSession *zenoh_pico_generate_session(const z_loaned_config_t *config,
     return &_zenohSession;
   }
 
+  /* Generate() zeroes the object, initialises its lock and sets ref to 1 for
+   * this reference. The memset that used to follow wiped the lock (leaking one
+   * pthread mutex per session) and the count; the RefClone that used to follow
+   * that then took a second reference nothing ever released. */
   session = ZenohPicoDataGenerate(session);
   RMW_CHECK_FOR_NULL_WITH_MSG(
     session,
     "failed to allocate struct for the ZenohPicoSession",
     return NULL);
-  memset(session, 0, sizeof(ZenohPicoSession));
 
   z_config_clone(&session->config, config);
 
@@ -63,11 +66,18 @@ ZenohPicoSession *zenoh_pico_generate_session(const z_loaned_config_t *config,
   }
 
   session->graph_guard_condition.implementation_identifier = rmw_get_implementation_identifier();
-  session->graph_guard_condition.data = zenoh_pico_guard_condition_data;
+  /* The allocated condition data, not the allocator's address: the original
+   * stored the function pointer here, so every session teardown destroyed a
+   * "mutex" that lived in code and faulted. */
+  session->graph_guard_condition.data = zenoh_pico_guard_condition_data();
+  if(session->graph_guard_condition.data == NULL) {
+    z_drop(z_move(session->config));
+    z_drop(z_move(session->enclave));
+    ZenohPicoDataRelease(session);
+    return NULL;
+  }
 
   session->enable_session = false;
-
-  ZenohPicoDataRefClone(session);
 
   return session;
 }
@@ -87,10 +97,18 @@ bool zenoh_pico_destroy_session(ZenohPicoSession *session)
     }
 
     zenoh_pico_destroy_guard_condition_data((ZenohPicoGuardConditionData *)session->graph_guard_condition.data);
+    session->graph_guard_condition.data = NULL;
 
     z_drop(z_move(session->config));
     z_drop(z_move(session->enclave));
     z_drop(z_move(session->session));
+    session->enable_session = false;
+
+    /* The session object is static, so ZenohPicoDataDestroy() (which would
+     * free it) is never called; drop its lock here or one pthread mutex leaks
+     * per session. The next generate re-initialises it. */
+    z_mutex_drop(z_move(session->lock));
+    session->ref = 0;
   }
 
   return true;
@@ -109,7 +127,15 @@ rmw_ret_t session_connect(ZenohPicoSession *session)
 
   RMW_ZENOH_LOG_DEBUG("Opening session...");
 
-  if(_Z_IS_ERR(z_open(&session->session, z_move(session->config), NULL))){
+  /* zenoh-pico >= 1.7 starts one background executor task inside z_open()
+   * (reads, callbacks, lease, reconnect); the attributes must go in here, the
+   * zp_start_*_task() calls below find it already running. */
+  z_open_options_t open_opts;
+  z_open_options_default(&open_opts);
+#if Z_FEATURE_MULTI_THREAD == 1
+  open_opts.executor_task_attributes = _rmw_zenoh_pico_read_task_attr;
+#endif
+  if(_Z_IS_ERR(z_open(&session->session, z_move(session->config), &open_opts))){
     RMW_ZENOH_LOG_ERROR("Error setting up zenoh session");
     return RMW_RET_ERROR;
   }

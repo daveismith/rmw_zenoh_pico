@@ -120,6 +120,12 @@ int rmw_zenoh_pico_debug_level_set(int level)
 
 void rmw_zenoh_pico_log_init()
 {
+  /* Once per process: rmw_init() calls this for every context, and a pthread
+   * mutex is an allocation that was never released. */
+  static bool inited = false;
+  if(inited)
+    return;
+  inited = true;
   z_mutex_init(&mutex_logging);
 }
 void rmw_zenoh_pico_log_lock()

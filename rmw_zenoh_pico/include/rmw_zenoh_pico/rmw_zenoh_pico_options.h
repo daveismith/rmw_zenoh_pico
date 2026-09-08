@@ -54,10 +54,13 @@ extern "C"
   extern int rmw_zenoh_pico_debug_level_get(void);
   extern int rmw_zenoh_pico_debug_level_set(int);
 
-  /* Attributes for zenoh-pico's read and lease tasks (z_task_attr_t is the
-   * platform's type; on FreeRTOS it carries name, priority, stack depth and an
-   * optional static stack). Call before rclc_support_init(); NULL keeps
-   * zenoh-pico's defaults. The pointers must stay valid while a session is open. */
+  /* Attributes for zenoh-pico's background task(s). Since zenoh-pico 1.7 one
+   * executor task does the reading, the subscription callbacks, the lease and
+   * reconnects, and `read_attr` is what it gets; `lease_attr` is kept for older
+   * zenoh-pico where the lease task is separate. z_task_attr_t is the platform's
+   * type (on FreeRTOS: name, priority, stack depth, optional static stack). Call
+   * before rclc_support_init(); NULL keeps zenoh-pico's defaults. The pointers
+   * must stay valid while a session is open. */
   extern void rmw_zenoh_pico_set_task_attrs(z_task_attr_t *read_attr, z_task_attr_t *lease_attr);
 
   /* True when there is no open session, or the open one has lost its transport

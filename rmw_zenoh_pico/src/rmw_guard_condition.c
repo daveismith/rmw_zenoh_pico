@@ -84,9 +84,11 @@ bool zenoh_pico_destroy_guard_condition_data(ZenohPicoGuardConditionData *condit
 {
   RMW_ZENOH_FUNC_ENTRY(NULL);
 
+  if(condition_data == NULL)
+    return true;
+
   z_mutex_drop(z_move(condition_data->condition_mutex));
-  if(condition_data != NULL)
-    Z_FREE(condition_data);
+  Z_FREE(condition_data);
 
   return true;
 }

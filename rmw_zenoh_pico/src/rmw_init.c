@@ -41,7 +41,14 @@ static bool zenoh_pico_clone_param(ZenohPicoTransportParams *dst, ZenohPicoTrans
   if ((dst == NULL) || (src == NULL))
     return false;
 
+  /* Copy the parameters, not the object's identity: dst has its own lock and
+   * reference count from Generate(), and overwriting them with src's leaked
+   * dst's mutex and made the two share one. */
+  z_owned_mutex_t lock = dst->lock;
+  int ref = dst->ref;
   memcpy(dst, src, sizeof(ZenohPicoTransportParams));
+  dst->lock = lock;
+  dst->ref = ref;
 
   return true;
 }
