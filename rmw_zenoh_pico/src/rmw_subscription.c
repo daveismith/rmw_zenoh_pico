@@ -120,11 +120,6 @@ static bool zenoh_pico_destroy_subscription_data(ZenohPicoSubData *sub_data)
     z_drop(z_move(sub_data->liveliness));
     z_drop(z_move(sub_data->topic));
 
-    while(!recv_msg_list_empty(&sub_data->message_queue)) {
-      ReceiveMessageData *msg_data = recv_msg_list_pop(&sub_data->message_queue);
-      ZenohPicoDataDestroy(msg_data);
-    }
-
     if(sub_data->node != NULL){
       (void)zenoh_pico_destroy_node_data(sub_data->node);
       sub_data->node = NULL;
@@ -135,19 +130,13 @@ static bool zenoh_pico_destroy_subscription_data(ZenohPicoSubData *sub_data)
       sub_data->entity = NULL;
     }
 
-    // free receive message list
-    // recv_msg_list_debug(&sub_data->message_queue);
+    /* Drains anything still queued -- freeing each message's payload and
+     * attachment, which the old open-coded loop did not -- and drops the list
+     * mutex. Safe here because the subscriber was undeclared above, so nothing
+     * can append any more. */
+    recv_msg_list_destroy(&sub_data->message_queue);
 
-    if(recv_msg_list_count(&sub_data->message_queue) > 0){
-      while(true){
-	ReceiveMessageData * recv_data = recv_msg_list_pop(&sub_data->message_queue);
-
-	if(recv_data == NULL)
-	  break;
-
-	(void)zenoh_pico_delete_recv_msg_data(recv_data);
-      }
-    }
+    data_callback_destroy(&sub_data->data_event_mgr);
 
     z_mutex_drop(z_move(sub_data->condition_mutex));
     sub_data->wait_set_data = NULL;

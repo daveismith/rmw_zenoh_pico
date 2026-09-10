@@ -174,25 +174,16 @@ bool zenoh_pico_destroy_service_data(ZenohPicoServiceData *data)
       data->entity = NULL;
     }
 
-    if(recv_msg_list_count(&data->request_queue) > 0){
-      while(true){
-	ReceiveMessageData * recv_data = recv_msg_list_pop(&data->request_queue);
-	if(recv_data == NULL)
-	  break;
+    /* Both queues drained and their list mutexes dropped; a service init'd two of
+     * them plus the event manager and the wait condition, and none were released.
+     * That was four FreeRTOS objects of internal DRAM per service per session. */
+    recv_msg_list_destroy(&data->request_queue);
+    recv_msg_list_destroy(&data->response_queue);
 
-	(void)zenoh_pico_delete_recv_msg_data(recv_data);
-      }
-    }
+    data_callback_destroy(&data->data_event_mgr);
 
-    if(recv_msg_list_count(&data->response_queue) > 0){
-      while(true){
-	ReceiveMessageData * res_data = recv_msg_list_pop(&data->response_queue);
-	if(res_data == NULL)
-	  break;
-
-	(void)zenoh_pico_delete_recv_msg_data(res_data);
-      }
-    }
+    z_mutex_drop(z_move(data->condition_mutex));
+    data->wait_set_data = NULL;
 
     ZenohPicoDataDestroy(data);
   }

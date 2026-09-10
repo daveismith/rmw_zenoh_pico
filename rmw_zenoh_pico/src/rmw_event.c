@@ -298,6 +298,21 @@ void data_callback_init(DataEventManager *data_callback)
   memset(data_callback->event_status, 0, sizeof(EventStatus));
 }
 
+/* The mutex is a FreeRTOS object in internal DRAM (about 100 bytes); every entity
+ * that data_callback_init()s one must drop it, or a session that comes and goes
+ * leaks one per entity per connect. */
+void data_callback_destroy(DataEventManager *data_callback)
+{
+  RMW_ZENOH_FUNC_ENTRY(NULL);
+
+  if(data_callback == NULL)
+    return;
+
+  z_drop(z_move(data_callback->mutex));
+  data_callback->callback  = NULL;
+  data_callback->user_data = NULL;
+}
+
 void data_callback_set(DataEventManager *data_callback,
 		       const void * user_data,
 		       rmw_event_callback_t callback)

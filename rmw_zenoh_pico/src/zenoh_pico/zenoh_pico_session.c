@@ -38,6 +38,31 @@ bool rmw_zenoh_pico_session_is_closed(void)
   return z_session_is_closed(z_loan(_zenohSession.session));
 }
 
+void rmw_zenoh_pico_session_quiesce(void)
+{
+  RMW_ZENOH_FUNC_ENTRY(NULL);
+
+  if(_zenohSession.ref <= 0 || !_zenohSession.enable_session)
+    return;
+
+  /*
+   * Call this before destroying entities, and the whole teardown goes quiet.
+   *
+   * Two things were wrong without it. Destroying an entity frees the mutexes its
+   * zenoh callback uses, but a callback runs OUTSIDE the session mutex, so a sample
+   * arriving mid-teardown could be dispatched into a context that had just been
+   * freed. And each entity's undeclare was a real network send from whatever task
+   * was doing the teardown -- with traffic still coming in, that send under the
+   * lwIP mbox lock was enough to trip the interrupt watchdog.
+   *
+   * zp_session_disconnect() stops and JOINS the executor (so no callback is in
+   * flight when it returns) and clears the transport (so every undeclare below
+   * becomes a no-op). The router drops the declarations when the session closes
+   * regardless, so nothing is lost by not sending them.
+   */
+  (void)zp_session_disconnect(z_loan_mut(_zenohSession.session));
+}
+
 ZenohPicoSession *zenoh_pico_generate_session(const z_loaned_config_t *config,
 					      const char *enclave)
 {

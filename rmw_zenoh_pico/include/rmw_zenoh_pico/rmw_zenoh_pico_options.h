@@ -67,6 +67,15 @@ extern "C"
    * (zenoh-pico's z_session_is_closed). For an application watchdog. */
   extern bool rmw_zenoh_pico_session_is_closed(void);
 
+  /* Take the session off the network before dismantling entities: stops and joins
+   * zenoh's executor (so no subscription callback is in flight, and freeing the
+   * mutexes an entity's callback uses becomes safe) and clears the transport (so
+   * each entity's undeclare is a no-op instead of a network send from the tearing-
+   * down task). Call immediately before destroying publishers/subscriptions/
+   * services and finalising the node; close the session as usual afterwards.
+   * Idempotent, and harmless when no session is open. */
+  extern void rmw_zenoh_pico_session_quiesce(void);
+
 #if defined(__cplusplus)
 }
 #endif  // if defined(__cplusplus)
