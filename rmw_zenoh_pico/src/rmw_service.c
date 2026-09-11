@@ -160,6 +160,10 @@ bool zenoh_pico_destroy_service_data(ZenohPicoServiceData *data)
 
     z_drop(z_move(data->liveliness_key));
     z_drop(z_move(data->liveliness));
+    /* The key expression the queryable (or query) was declared on. The publisher and
+     * subscription destroys drop theirs; this one did not, and leaked it per service
+     * per session. */
+    z_drop(z_move(data->topic_key));
 
     attachment_destroy(&data->attachment);
     z_drop(z_move(data->mutex));
@@ -358,7 +362,7 @@ rmw_create_service(
   }
 
   ZenohPicoServiceData * service_data = zenoh_pico_generate_service_data(
-    node_data,
+    ZenohPicoDataRefClone(node_data),
     service_name,
     type_support,
     qos_profile,

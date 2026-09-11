@@ -103,7 +103,7 @@ rmw_create_client(
   }
 
   ZenohPicoServiceData * client_data = zenoh_pico_generate_service_data(
-    node_data,
+    ZenohPicoDataRefClone(node_data),
     service_name,
     type_support,
     qos_profile,
