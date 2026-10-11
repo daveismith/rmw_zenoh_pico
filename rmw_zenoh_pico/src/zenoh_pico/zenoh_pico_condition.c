@@ -22,7 +22,17 @@
 #if defined(ZENOH_LINUX) || defined (ZENOH_ARDUINO_ESP32) || defined (ZENOH_ESPIDF)
 
 z_result_t z_condvar_init_with_attr(z_owned_condvar_t *cv, pthread_condattr_t *attr){
+#if defined (ZENOH_ESPIDF)
+  /* zenoh-pico's ESP-IDF condvar is FreeRTOS semaphores now, not a pthread_cond_t, so that
+   * it can live in PSRAM; there is no attribute to give it, and the only caller passes
+   * NULL. Its deadlines are CLOCK_MONOTONIC, as z_condvar_timewait() below supplies. */
+  if (attr != NULL) {
+    return _Z_ERR_GENERIC;
+  }
+  return _z_condvar_init(&cv->_val);
+#else
   _Z_CHECK_SYS_ERR(pthread_cond_init(&cv->_val, attr));
+#endif
 }
 
 z_result_t z_condvar_timewait(z_loaned_condvar_t *cv, z_loaned_mutex_t *mp, struct timespec *wait_timeout){

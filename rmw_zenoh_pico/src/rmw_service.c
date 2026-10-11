@@ -127,6 +127,11 @@ ZenohPicoServiceData * zenoh_pico_generate_service_data(
   z_mutex_init(&data->condition_mutex);
   data->wait_set_data = NULL;
 
+  /* rmw_send_response() and the client's reply path lock this, and
+   * zenoh_pico_destroy_service_data() drops it, but nothing made it: with pthreads every
+   * lock failed EINVAL and serialised nothing, and a FreeRTOS mutex asserts on it. */
+  z_mutex_init(&data->mutex);
+
   // generate gid
   uint8_t _gid[RMW_GID_STORAGE_SIZE];
   zenoh_pico_gen_gid(z_loan(data->topic_key), _gid);

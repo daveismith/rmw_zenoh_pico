@@ -151,7 +151,10 @@ rmw_wait(rmw_subscriptions_t * subscriptions,
 	z_condvar_wait(cv, lock);
 
     }else{
-      if (wait_timeout->sec != 0 || wait_timeout->nsec != 0) {
+      /* A trigger that landed between the readiness check above and taking the lock has
+       * already set `triggered` and signalled nobody; waiting anyway sat out the whole
+       * timeout with the work ready. The untimed wait above checks it; so does this. */
+      if (!wait_set_data->triggered && (wait_timeout->sec != 0 || wait_timeout->nsec != 0)) {
 	struct timespec timeout;
 
 	memset(&timeout, 0, sizeof(struct timespec));

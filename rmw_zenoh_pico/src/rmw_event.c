@@ -292,10 +292,16 @@ void data_callback_init(DataEventManager *data_callback)
   RMW_ZENOH_FUNC_ENTRY(NULL);
 
   z_mutex_init(&data_callback->mutex);
+  /* Locked by the event wait path (event_condition_*) and never initialised: a pthread
+   * mutex that was never made fails every lock with EINVAL and so locked nothing, where
+   * a FreeRTOS one asserts on its NULL handle. */
+  z_mutex_init(&data_callback->condition_mutex);
+  data_callback->wait_set_data = NULL;
   data_callback->callback = NULL;
   data_callback->user_data = NULL;
   data_callback->unread_count = 0;
-  memset(data_callback->event_status, 0, sizeof(EventStatus));
+  /* The whole table, not its first entry. */
+  memset(data_callback->event_status, 0, sizeof(data_callback->event_status));
 }
 
 /* The mutex is a FreeRTOS object in internal DRAM (about 100 bytes); every entity
@@ -309,6 +315,7 @@ void data_callback_destroy(DataEventManager *data_callback)
     return;
 
   z_drop(z_move(data_callback->mutex));
+  z_drop(z_move(data_callback->condition_mutex));
   data_callback->callback  = NULL;
   data_callback->user_data = NULL;
 }

@@ -455,14 +455,19 @@ rmw_init(const rmw_init_options_t * options, rmw_context_t * context)
     ret = rmw_zenoh_pico_set_serial_config(params, &config);
 #endif
 
-    if(ret != RMW_RET_OK)
+    if(ret != RMW_RET_OK) {
+      z_drop(z_config_move(&config));
       return ret;
+    }
   }
 
+  /* The session takes a clone (z_config_clone), so this copy is ours to drop on both paths;
+   * it used to be dropped only on failure, leaking the default config's hashmap entries
+   * and strings -- ~220 bytes of PSRAM -- on every successful init, so once per connect. */
   ZenohPicoSession *session = zenoh_pico_generate_session(z_loan(config), options->enclave);
+  z_drop(z_config_move(&config));
   if(session == NULL){
     RMW_SET_ERROR_MSG("falid generate session data");
-    z_drop(z_config_move(&config));
     return RMW_RET_ERROR;
   }
 
